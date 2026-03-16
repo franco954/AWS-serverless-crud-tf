@@ -97,3 +97,27 @@ resource "aws_lambda_function" "update_task" {
     }
   }
 }
+
+
+data "archive_file" "delete_task_zip" {
+  type        = "zip"
+  source_file = "${path.module}/lambda/delete_task.py"
+  output_path = "${path.module}/lambda/delete_task.zip"
+}
+
+resource "aws_lambda_function" "delete_task" {
+  filename         = data.archive_file.delete_task_zip.output_path
+  function_name    = "${var.project_name}-${var.environment}-delete-task"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "delete_task.lambda_handler"
+  source_code_hash = data.archive_file.delete_task_zip.output_base64sha256
+  runtime         = "python3.11"
+  timeout         = 10
+  memory_size     = 128
+  
+  environment {
+    variables = {
+      TABLE_NAME = aws_dynamodb_table.tasks.name
+    }
+  }
+}

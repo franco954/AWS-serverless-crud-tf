@@ -16,12 +16,12 @@ output "lambda_role_arn" {
   value       = aws_iam_role.lambda_role.arn
 }
 
-# Nombres de las funciones Lambda
 output "lambda_functions" {
   description = "Nombres de las funciones Lambda"
   value = {
     get_tasks    = aws_lambda_function.get_tasks.function_name
     create_task  = aws_lambda_function.create_task.function_name
     update_task  = aws_lambda_function.update_task.function_name
+    delete_task  = aws_lambda_function.delete_task.function_name
   }
 }
