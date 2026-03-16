@@ -1,0 +1,6 @@
+curl -X POST https://rsulu3zcre.execute-api.us-east-1.amazonaws.com/dev/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Aprender Terraform",
+    "description": "Proyecto serverless en AWS"
+  }'

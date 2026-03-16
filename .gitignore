@@ -1,0 +1,201 @@
+# ============================================
+# TERRAFORM
+# ============================================
+
+# State files - NUNCA commitear estos
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Directorio de plugins y módulos
+.terraform/
+.terraform.lock.hcl
+
+# Variables con valores sensibles
+*.tfvars
+*.tfvars.json
+terraform.tfvars
+terraform.tfvars.json
+
+# Excepción: podés commitear archivos de ejemplo
+!example.tfvars
+!*.example.tfvars
+
+# Override files (para testing local)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI configuration files
+.terraformrc
+terraform.rc
+
+# ============================================
+# AWS CREDENTIALS - MUY IMPORTANTE
+# ============================================
+
+# Credenciales de AWS
+.aws/
+*.pem
+*.key
+*.crt
+
+# Lambda deployment packages
+*.zip
+
+# ============================================
+# PYTHON (Lambda functions)
+# ============================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ============================================
+# NODE.JS (si usas Lambda con Node)
+# ============================================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ============================================
+# SISTEMAS OPERATIVOS
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ============================================
+# IDEs y EDITORES
+# ============================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# PyCharm
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ============================================
+# LOGS Y TEMPORALES
+# ============================================
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# ============================================
+# OUTPUTS Y BUILD
+# ============================================
+
+# Directorios de build
+dist/
+build/
+*.egg-info/
+
+# Archivos de output
+outputs/
+
+# ============================================
+# BACKUPS
+# ============================================
+
+*.bak
+*.backup
+*~
+
+# ============================================
+# NOTAS PERSONALES
+# ============================================
+
+# Carpeta de notas (la que tenés en tu proyecto)
+notas/
+notes/
+TODO.md
+NOTES.md
+
+# ============================================
+# TESTING
+# ============================================
+
+# Test outputs
+test-results/
+coverage/
+.tox/
+
+# ============================================
+# OTROS
+# ============================================
+
+# Archivos de configuración local
+.env
+.env.local
+.env.*.local
+
+# Certificados SSL locales
+*.pem
+*.key
+*.csr
+*.crt
+
+# Secrets
+secrets/
+*.secret
