@@ -1,124 +1,101 @@
 """
 Lambda Function: GET /tasks
-Descripción: Lista todas las tareas de DynamoDB
- 
-Event structure (API Gateway Proxy Integration):
+Descripción: Obtiene todas las tareas del usuario autenticado
+
+Event structure incluye claims de Cognito:
 {
-    "httpMethod": "GET",
-    "path": "/tasks",
-    "headers": {...},
-    "queryStringParameters": {...},
-    "body": null
+    "requestContext": {
+        "authorizer": {
+            "claims": {
+                "sub": "user-id-uuid",
+                "email": "user@example.com"
+            }
+        }
+    }
 }
 """
- 
+
 import json
 import boto3
 import os
 from decimal import Decimal
- 
-# Cliente de DynamoDB
+
 dynamodb = boto3.resource('dynamodb')
-# Lee el nombre de la tabla de variables de entorno
 table_name = os.environ['TABLE_NAME']
 table = dynamodb.Table(table_name)
- 
- 
+
+
 def lambda_handler(event, context):
     """
-    Handler principal de la Lambda
-    
-    Args:
-        event: Evento de API Gateway (dict con httpMethod, body, headers, etc)
-        context: Contexto de ejecución de Lambda
-    
-    Returns:
-        Response en formato API Gateway Proxy:
-        {
-            "statusCode": 200,
-            "headers": {...},
-            "body": "..." (JSON string)
-        }
+    Obtiene todas las tareas del usuario autenticado
     """
-    
     try:
-        # Scan de toda la tabla
-        # NOTA: Scan es costoso en tablas grandes. Para producción, usá Query con índices.
-        response = table.scan()
+        # Extraer userId del token JWT (Cognito)
+        user_id = event['requestContext']['authorizer']['claims']['sub']
         
-        # response['Items'] es una lista de dicts
-        items = response['Items']
+        print(f"Getting tasks for user: {user_id}")
         
-        # DynamoDB devuelve Decimal en lugar de int/float
-        # Los convertimos a tipos Python normales para JSON
-        items = convert_decimals(items)
+        # Query DynamoDB por userId (partition key)
+        response = table.query(
+            KeyConditionExpression='userId = :uid',
+            ExpressionAttributeValues={
+                ':uid': user_id
+            }
+        )
         
-        # Response exitoso
+        tasks = response.get('Items', [])
+        
+        print(f"Found {len(tasks)} tasks for user {user_id}")
+        
         return {
             'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',  # CORS - permite cualquier origen
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-            },
+            'headers': get_cors_headers(),
             'body': json.dumps({
-                'tasks': items,
-                'count': len(items)
+                'tasks': convert_decimals(tasks),
+                'count': len(tasks)
             })
         }
         
+    except KeyError as e:
+        print(f"Error: Missing authorization context - {str(e)}")
+        return {
+            'statusCode': 401,
+            'headers': get_cors_headers(),
+            'body': json.dumps({
+                'error': 'Unauthorized - No valid token provided'
+            })
+        }
+    
     except Exception as e:
-        # Log del error (va a CloudWatch)
-        print(f"Error al obtener tareas: {str(e)}")
-        
-        # Response de error
+        print(f"Error: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': get_cors_headers(),
             'body': json.dumps({
-                'error': 'Error interno del servidor',
-                'message': str(e)
+                'error': f'Internal server error: {str(e)}'
             })
         }
- 
- 
+
+
+def get_cors_headers():
+    """Headers CORS"""
+    return {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+    }
+
+
 def convert_decimals(obj):
-    """
-    Convierte objetos Decimal de DynamoDB a int/float para JSON
-    DynamoDB usa Decimal para números, pero json.dumps() no los soporta.
+    """Convierte Decimal de DynamoDB a int/float"""
+    from decimal import Decimal
     
-    Args:
-        obj: Objeto (dict, list, Decimal, etc)
-    
-    Returns:
-        Objeto con Decimals convertidos
-    """
     if isinstance(obj, list):
         return [convert_decimals(i) for i in obj]
     elif isinstance(obj, dict):
         return {k: convert_decimals(v) for k, v in obj.items()}
     elif isinstance(obj, Decimal):
-        # Si es entero, devuelve int; sino float
-        if obj % 1 == 0:
-            return int(obj)
-        else:
-            return float(obj)
+        return int(obj) if obj % 1 == 0 else float(obj)
     else:
         return obj
- 
- 
-# Para testing local (opcional)
-if __name__ == "__main__":
-    # Simula un evento de API Gateway
-    test_event = {
-        "httpMethod": "GET",
-        "path": "/tasks"
-    }
-    
-    # Ejecuta el handler
-    result = lambda_handler(test_event, None)
-    print(json.dumps(result, indent=2))

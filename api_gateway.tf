@@ -13,6 +13,13 @@ resource "aws_api_gateway_rest_api" "tasks_api" {
   }
 }
 
+resource "aws_api_gateway_authorizer" "cognito" {
+  name          = "cognito-authorizer"
+  type          = "COGNITO_USER_POOLS"
+  rest_api_id   = aws_api_gateway_rest_api.tasks_api.id
+  provider_arns = [aws_cognito_user_pool.tasks_pool.arn]
+}
+
 # ============================================
 # Resource: /tasks
 # ============================================
@@ -34,7 +41,8 @@ resource "aws_api_gateway_method" "get_tasks" {
   rest_api_id   = aws_api_gateway_rest_api.tasks_api.id
   resource_id   = aws_api_gateway_resource.tasks.id
   http_method   = "GET"
-  authorization = "NONE"  # Sin autenticación (por ahora)
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id  
   
   # Configuración de request
   request_parameters = {
@@ -73,7 +81,8 @@ resource "aws_api_gateway_method" "post_tasks" {
   rest_api_id   = aws_api_gateway_rest_api.tasks_api.id
   resource_id   = aws_api_gateway_resource.tasks.id
   http_method   = "POST"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id  
 }
 
 resource "aws_api_gateway_integration" "post_tasks_integration" {
@@ -107,7 +116,8 @@ resource "aws_api_gateway_method" "put_task" {
   rest_api_id   = aws_api_gateway_rest_api.tasks_api.id
   resource_id   = aws_api_gateway_resource.task_by_id.id
   http_method   = "PUT"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id  
   
   # El {id} se pasa como path parameter
   request_parameters = {
@@ -140,7 +150,8 @@ resource "aws_api_gateway_method" "delete_task" {
   rest_api_id   = aws_api_gateway_rest_api.tasks_api.id
   resource_id   = aws_api_gateway_resource.task_by_id.id
   http_method   = "DELETE"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id  
   
   request_parameters = {
     "method.request.path.id" = true

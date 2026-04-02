@@ -1,19 +1,12 @@
 """
 Lambda Function: DELETE /tasks/{id}
-Descripción: Borra una tarea de DynamoDB
-
-Event structure:
-{
-    "httpMethod": "DELETE",
-    "pathParameters": {"id": "task-uuid"}
-}
+Descripción: Borra una tarea del usuario (con validación de ownership)
 """
 
 import json
 import boto3
 import os
 
-# Cliente de DynamoDB
 dynamodb = boto3.resource('dynamodb')
 table_name = os.environ['TABLE_NAME']
 table = dynamodb.Table(table_name)
@@ -21,80 +14,62 @@ table = dynamodb.Table(table_name)
 
 def lambda_handler(event, context):
     """
-    Borra una tarea existente
-    
-    Path parameter:
-        id: taskId de la tarea a borrar
-    
-    Returns:
-        200: Tarea borrada exitosamente
-        404: Tarea no encontrada
-        500: Error interno
+    Borra una tarea
     """
-    
     try:
-        # Obtener el ID del path parameter
-        task_id = event.get('pathParameters', {}).get('id')
+        # Extraer userId y taskId
+        user_id = event['requestContext']['authorizer']['claims']['sub']
+        task_id = event['pathParameters']['id']
         
-        if not task_id:
-            return error_response(400, 'ID de tarea no proporcionado')
-        
-        # Verificar que la tarea existe ANTES de intentar borrarla
-        # Esto previene borrar algo que no existe y da mejor feedback
-        try:
-            existing_task = table.get_item(Key={'taskId': task_id})
-        except Exception as e:
-            print(f"Error al buscar tarea: {str(e)}")
-            return error_response(500, f'Error al buscar tarea: {str(e)}')
+        # Verificar que existe y pertenece al usuario
+        existing_task = table.get_item(
+            Key={
+                'userId': user_id,
+                'taskId': task_id
+            }
+        )
         
         if 'Item' not in existing_task:
-            return error_response(404, f'Tarea con ID {task_id} no encontrada')
+            return error_response(404, 'Task not found or you do not have permission')
         
-        # Guardar info de la tarea antes de borrarla (para el response)
+        # Guardar info antes de borrar
         deleted_task = existing_task['Item']
         
-        # Borrar la tarea
-        try:
-            table.delete_item(Key={'taskId': task_id})
-        except Exception as e:
-            print(f"Error al borrar tarea: {str(e)}")
-            return error_response(500, f'Error al borrar tarea: {str(e)}')
+        # Borrar
+        table.delete_item(
+            Key={
+                'userId': user_id,
+                'taskId': task_id
+            }
+        )
         
-        # Log exitoso
-        print(f"Tarea borrada: {task_id} - {deleted_task.get('title', 'Sin título')}")
+        print(f"Task deleted: {task_id} for user {user_id}")
         
-        # Response exitoso con la tarea que se borró
         return {
             'statusCode': 200,
             'headers': get_cors_headers(),
             'body': json.dumps({
-                'message': 'Tarea borrada exitosamente',
+                'message': 'Task deleted successfully',
                 'deletedTask': convert_decimals(deleted_task)
             })
         }
         
+    except KeyError:
+        return error_response(401, 'Unauthorized')
     except Exception as e:
-        print(f"Error inesperado: {str(e)}")
-        return error_response(500, f'Error interno: {str(e)}')
+        print(f"Error: {str(e)}")
+        return error_response(500, str(e))
 
 
 def error_response(status_code, message):
-    """
-    Helper para responses de error consistentes
-    """
     return {
         'statusCode': status_code,
         'headers': get_cors_headers(),
-        'body': json.dumps({
-            'error': message
-        })
+        'body': json.dumps({'error': message})
     }
 
 
 def get_cors_headers():
-    """
-    Headers CORS estándar
-    """
     return {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -104,32 +79,12 @@ def get_cors_headers():
 
 
 def convert_decimals(obj):
-    """
-    Convierte objetos Decimal de DynamoDB a int/float para JSON
-    """
     from decimal import Decimal
-    
     if isinstance(obj, list):
         return [convert_decimals(i) for i in obj]
     elif isinstance(obj, dict):
         return {k: convert_decimals(v) for k, v in obj.items()}
     elif isinstance(obj, Decimal):
-        if obj % 1 == 0:
-            return int(obj)
-        else:
-            return float(obj)
+        return int(obj) if obj % 1 == 0 else float(obj)
     else:
         return obj
-
-
-# Testing local
-if __name__ == "__main__":
-    test_event = {
-        "httpMethod": "DELETE",
-        "pathParameters": {
-            "id": "test-task-id"
-        }
-    }
-    
-    result = lambda_handler(test_event, None)
-    print(json.dumps(result, indent=2))
